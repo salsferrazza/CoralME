@@ -568,7 +568,7 @@ public class OrderBook implements OrderListener {
 		
 		Type type = order.getType();
 		
-		if (type == Type.MARKET && order.getPrice() != 0) {
+		if (order.isMarket() && order.getPrice() != 0) {
 			
 			order.reject(timestamper.nanoEpoch(), RejectReason.BAD_PRICE); // remember... the OrderListener callback will return the order to the pool...
 			
@@ -595,8 +595,7 @@ public class OrderBook implements OrderListener {
 
 		if (!order.isTerminal()) {
 			
-			if (type == Type.MARKET) {
-				
+			if (order.isMarket() && order.getTimeInForce() == Order.TimeInForce.IOC) {
 				order.cancel(timestamper.nanoEpoch(), CancelReason.NO_LIQUIDITY);
 					
 			} else {
@@ -646,7 +645,7 @@ public class OrderBook implements OrderListener {
 			order.cancel(timestamper.nanoEpoch(), cancelReason);
 			
 		} else {
-		
+			
 			rest(order);
 			
 		}
@@ -658,7 +657,7 @@ public class OrderBook implements OrderListener {
 		
 		Order order = getOrder(clientId, clientOrderId, security, side, size, price, type, tif);
 		
-		if (tif == TimeInForce.IOC || type == Type.MARKET) {
+		if (tif == TimeInForce.IOC) {
 			
 			return fillOrCancel(order, exchangeOrderId);
 			
@@ -744,7 +743,9 @@ public class OrderBook implements OrderListener {
 	
 	private final void rest(Order order) {
 		
-		PriceLevel priceLevel = findPriceLevel(order.getSide(), order.getPrice());
+		PriceLevel priceLevel = findPriceLevel(order.getSide(), (Order.isMarket() 
+									 ? this.getLastExecutedPrice() 
+									 : order.getPrice()));
 		
 		order.setPriceLevel(priceLevel);
 		
